@@ -20,3 +20,43 @@ test('pose replacement preserves an in-flow current image across rapid changes',
 test('audience reconstructs live state on refresh and closes on other scenes',async()=>{setup();const audience=new Audience();const scene=newScene('background.webp');addActor(scene,{id:'a',name:'A',img:'a.png'});await audience.show({active:true,hostSceneId:'host',scene,revision:1});assert.ok(document.querySelector('.pc-audience'));assert.equal(audience.stage.nodes.size,1);await audience.show({active:true,hostSceneId:'other',scene,revision:2});assert.equal(document.querySelector('.pc-audience'),null);await audience.show({active:true,hostSceneId:'host',scene,revision:3});await audience.show({active:false});assert.equal(document.querySelector('.pc-audience'),null);});
 test('assets editor saves variants independently of the actor sheet form',async()=>{const {actors}=setup();const app=new AssetsEditor(actors[0]);await app.render();await app.action({dataset:{pc:'add'}},app.content);assert.equal(app.poses.neutral.length,2);app.poses.neutral[1].src='extra.webp';await app.action({dataset:{pc:'save'}},app.content);assert.equal(actors[0].saved.neutral[1].src,'extra.webp');assert.equal(app.dirty,false);});
 test('Foundry hooks register GM rail controls and inject an actor asset tab once',async()=>{const {values}=setup();const registrations={};const hooks={};globalThis.Hooks={once:(k,fn)=>(hooks[k]??=[]).push(fn),on:(k,fn)=>(hooks[k]??=[]).push(fn)};globalThis.Actor=class {constructor(){this.id='npc';this.name='NPC';}getFlag(){return {};}};game.settings.register=(_id,key,opts)=>{registrations[key]=opts;};game.settings.registerMenu=()=>{};game.modules={get:()=>({})};await import('../scripts/main.mjs');hooks.init[0]();hooks.ready[0]();assert.equal(registrations.live.restricted,true);assert.equal(registrations.library.restricted,true);const controls={tokens:{}};hooks.getSceneControlButtons[0](controls);assert.equal(controls.peakCinema.title,'Scene Animation Controls');game.user.isGM=false;const playerControls={};hooks.getSceneControlButtons[0](playerControls);assert.equal(playerControls.peakCinema,undefined);game.user.isGM=true;const host=document.createElement('div');host.innerHTML='<nav class="tabs" data-group="primary"><a data-tab="details">Details</a></nav><div class="sheet-body"><section class="tab active" data-group="primary" data-tab="details">Details</section></div>';const app={actor:new Actor(),element:host};hooks.renderActorSheet[0](app,host);hooks.renderApplicationV2[0](app,host);assert.equal(host.querySelectorAll('[data-pc-sheet-tab]').length,1);host.querySelector('[data-pc-sheet-tab]').click();assert.equal(host.classList.contains('pc-sheet-open'),true);assert.equal(host.querySelector('.pc-sheet-assets').classList.contains('active'),true);host.querySelector('[data-tab="details"]').click();assert.equal(host.classList.contains('pc-sheet-open'),false);});
+
+test('real director button clicks execute once after repeated rerenders',async()=>{
+  const {store}=setup();
+  const app=new Director(store);
+  await app.render();
+  const pending=[];
+  const original=app.action.bind(app);
+  let calls=0;
+  app.action=(action,button)=>{calls++;const result=original(action,button);pending.push(result);return result;};
+  const click=async(selector)=>{calls=0;app.root.querySelector(selector).click();await Promise.all(pending.splice(0));assert.equal(calls,1,`${selector} should dispatch one action`);};
+  await click('[data-pc="library"]');assert.equal(app.tab,'library');
+  await click('[data-pc="current"]');assert.equal(app.tab,'current');
+  await click('[data-pc="library"]');
+  await click('[data-pc="new"]');assert.ok(app.libraryDraft);
+  await click('[data-pc="save"]');assert.equal(store.get('library').length,1);
+  await click('[data-pc="use-scene"]');assert.equal(app.tab,'current');
+  app.root.querySelector('[data-choice="actor"]').value='a';
+  await click('[data-pc="add-actor"]');assert.equal(app.current.actors.length,1);
+  await click('[data-pc="flip"]');assert.equal(app.current.actors[0].flip,true);
+  await click('[data-pc="flip"]');assert.equal(app.current.actors[0].flip,false);
+  await click('.pc-right [data-pc="speak"]');assert.equal(app.current.actors[0].speaking,true);
+  await click('.pc-right [data-pc="speak"]');assert.equal(app.current.actors[0].speaking,false);
+  clearTimeout(app.draftTimer);
+});
+
+test('director opens and buttons work in the logged non-secure browser environment',async t=>{
+  const {store}=setup();
+  const originalCrypto=Object.getOwnPropertyDescriptor(globalThis,'crypto');
+  const originalRandom=foundry.utils.randomID;
+  t.after(()=>{Object.defineProperty(globalThis,'crypto',originalCrypto);if(originalRandom)foundry.utils.randomID=originalRandom;else delete foundry.utils.randomID;});
+  let next=0;
+  foundry.utils.randomID=()=>`http-id-${++next}`;
+  Object.defineProperty(globalThis,'crypto',{configurable:true,value:{getRandomValues:values=>values.fill(1)}});
+  const app=new Director(store);await app.render();
+  assert.ok(app.root.querySelector('[data-pc="library"]'));
+  assert.match(app.current.id,/^http-id-/);
+  await app.action('library',{});await app.action('new',{});
+  assert.ok(app.root.querySelector('.pc-preview'));
+  clearTimeout(app.draftTimer);
+});

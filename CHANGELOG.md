@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Fixed the left-rail director failing to open on HTTP/LAN browser sessions where `crypto.randomUUID()` is unavailable. Scene and pose IDs now use Foundry's ID generator.
+- Fixed director click handlers accumulating after rerenders, which could repeat button actions.
+- Added regression coverage for missing `randomUUID` and real button clicks after repeated renders.
+
 ## 1.0.0
 
 - Standalone Foundry 14 cinematic overlay with a GM-only left-rail director.

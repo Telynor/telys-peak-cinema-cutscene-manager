@@ -1,7 +1,13 @@
 export const ID = 'telys-peak-cinema-cutscene-manager';
 export const EXPRESSIONS = ['neutral', 'talking', 'happy', 'sad', 'laughing', 'disappointment', 'talk-pose-1', 'talk-pose-2', 'talk-pose-3'];
 export const clone = value => structuredClone(value);
-export const uid = () => globalThis.crypto.randomUUID();
+export function uid() {
+  // Foundry's helper works on HTTP/LAN hosts where randomUUID is unavailable.
+  if (typeof globalThis.foundry?.utils?.randomID === 'function') return globalThis.foundry.utils.randomID(24);
+  if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
 export const clamp = (v, min, max, fallback = min) => Number.isFinite(Number(v)) ? Math.min(max, Math.max(min, Number(v))) : fallback;
 export const text = (v, max = 2000) => String(v ?? '').slice(0, max);
 export function asset(v) {

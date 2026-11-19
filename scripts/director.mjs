@@ -15,7 +15,7 @@ export class Director extends App {
   constructor(store,...args){super(...args);this.store=store;const live=store.get('live');this.current=normalizeScene(game.settings.get(ID,'draft') || (live.active?live.scene:newScene()));this.libraryDraft=null;this.tab='current';this.selected='';this.dirty=false;this.libraryDirty=false;this.stage=null;this.saving=Promise.resolve();}
   get draft(){return this.tab==='current'?this.current:this.libraryDraft;}
   async _renderHTML(){const root=document.createElement('div');root.className='pc-director';root.innerHTML=this.html();return root;}
-  _replaceHTML(result,content){this.stage?.destroy();content.replaceChildren(result);this.bind(content);}
+  _replaceHTML(result,content){this.stage?.destroy();content.replaceChildren(result);this.bind(result);}
   _canRender(){if(!game.user.isGM)return false;}
   html(){
     const d=this.draft,p=d?.actors.find(a=>a.id===this.selected),live=this.store.get('live');

@@ -16,3 +16,29 @@ test('preset save updates and quick copies remain distinct',async()=>{const {sto
 test('end cutscene survives refresh state and blocks further live patches',async()=>{const {store,values}=setup();const d=newScene();const a=addActor(d,actor);await store.publish(d,'host');await store.stop();assert.equal(values.live.active,false);assert.equal(await store.patchActor(d.id,a.id,{flip:true}),false);});
 test('players cannot publish, stop or mutate presets',async()=>{const {settings}=setup();const store=new CinemaStore(settings,{isGM:false});await assert.rejects(store.publish(newScene(),'host'),/Only a GM/);await assert.rejects(store.stop(),/Only a GM/);await assert.rejects(store.savePreset(newScene()),/Only a GM/);});
 test('imports validate format and assign fresh IDs',()=>{const s=newScene();const imported=importLibrary({format:ID,version:1,scenes:[s]});assert.notEqual(imported[0].id,s.id);assert.throws(()=>importLibrary({scenes:[s]}),/Peak Cinema/);assert.throws(()=>importLibrary({format:ID,version:1,scenes:Array(501).fill(s)}),/500/);});
+
+test('IDs use Foundry randomID when browser randomUUID is unavailable',t=>{
+  const originalFoundry=Object.getOwnPropertyDescriptor(globalThis,'foundry');
+  const originalCrypto=Object.getOwnPropertyDescriptor(globalThis,'crypto');
+  t.after(()=>{if(originalFoundry)Object.defineProperty(globalThis,'foundry',originalFoundry);else delete globalThis.foundry;Object.defineProperty(globalThis,'crypto',originalCrypto);});
+  let next=0;
+  Object.defineProperty(globalThis,'foundry',{configurable:true,value:{utils:{randomID:length=>`foundry-${length}-${++next}`}}});
+  Object.defineProperty(globalThis,'crypto',{configurable:true,value:{getRandomValues:values=>values.fill(7)}});
+  const scene=newScene();
+  assert.match(scene.id,/^foundry-24-/);
+  const placement=addActor(scene,actor);
+  assert.match(placement.id,/^foundry-24-/);
+  assert.notEqual(placement.id,scene.id);
+  const copy=duplicateScene(scene);
+  assert.notEqual(copy.id,scene.id);
+  assert.ok(poseLibrary({happy:[{src:'happy.png'}]}).happy[0].id.startsWith('foundry-24-'));
+});
+
+test('standalone ID fallback supports crypto without randomUUID',t=>{
+  const originalFoundry=Object.getOwnPropertyDescriptor(globalThis,'foundry');
+  const originalCrypto=Object.getOwnPropertyDescriptor(globalThis,'crypto');
+  t.after(()=>{if(originalFoundry)Object.defineProperty(globalThis,'foundry',originalFoundry);else delete globalThis.foundry;Object.defineProperty(globalThis,'crypto',originalCrypto);});
+  Object.defineProperty(globalThis,'foundry',{configurable:true,value:undefined});
+  Object.defineProperty(globalThis,'crypto',{configurable:true,value:{getRandomValues:values=>values.fill(12)}});
+  assert.equal(newScene().id,'0c'.repeat(16));
+});
