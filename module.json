@@ -1,0 +1,15 @@
+{
+  "id": "telys-peak-cinema-cutscene-manager",
+  "title": "Tely's Peak Cinema Cutscene Manager",
+  "description": "Standalone visual novel cutscene director: private staging, actor expressions, cinematic backgrounds, and reusable scene builders without changing Foundry scenes.",
+  "version": "1.0.0",
+  "authors": [{"name": "Telynor"}],
+  "compatibility": {"minimum": "14", "verified": "14"},
+  "esmodules": ["scripts/main.mjs"],
+  "styles": ["styles/cinema.css"],
+  "socket": false,
+  "url": "https://github.com/Telynor/telys-peak-cinema-cutscene-manager",
+  "manifest": "https://raw.githubusercontent.com/Telynor/telys-peak-cinema-cutscene-manager/main/module.json",
+  "download": "https://github.com/Telynor/telys-peak-cinema-cutscene-manager/archive/refs/heads/main.zip",
+  "license": "LICENSE"
+}

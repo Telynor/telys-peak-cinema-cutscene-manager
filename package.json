@@ -1,0 +1,1 @@
+{"name":"telys-peak-cinema-cutscene-manager","version":"1.0.0","type":"module","private":true,"scripts":{"test":"node --test tests/*.test.mjs","check":"node --check scripts/model.mjs && node --check scripts/stage.mjs && node --check scripts/director.mjs && node --check scripts/main.mjs"},"devDependencies":{"jsdom":"^26.1.0"}}
